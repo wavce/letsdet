@@ -1,0 +1,234 @@
+anchors:
+  aspect_ratios:
+  - 0.5
+  - 1.0
+  - 2.0
+  generator: AnchorGenerator
+  num_anchors: 3
+  scales:
+  - - 32
+  - - 64
+  - - 128
+  - - 256
+  - - 512
+  strides:
+  - 4
+  - 8
+  - 16
+  - 32
+  - 64
+backbone:
+  activation:
+    activation: relu
+  backbone: CaffeResNet50
+  dilation_rates:
+  - 1
+  - 1
+  - 1
+  - 1
+  - 1
+  dropblock: null
+  frozen_stages:
+  - -1
+  normalization:
+    epsilon: 0.0001
+    momentum: 0.997
+    normalization: batch_norm
+    trainable: true
+  output_indices:
+  - 2
+  - 3
+  - 4
+  - 5
+  strides:
+  - 2
+  - 2
+  - 2
+  - 2
+  - 2
+data_format: channels_last
+detector: FasterRCNN
+dtype: float16
+input_shape: !!python/tuple
+- 1088
+- 800
+- 3
+neck:
+  add_extra_convs: false
+  feat_dims: 256
+  max_level: 5
+  min_level: 2
+  neck: FPN
+  num_output_levels: 5
+num_classes: 80
+roi_head:
+  assigner:
+    assigner: MaxIoUAssigner
+    min_pos_iou: 0.5
+    neg_iou_thresh: 0.5
+    pos_iou_thresh: 0.5
+  bbox_decoder:
+    decoder: Delta2Box
+    weights:
+    - 10.0
+    - 10.0
+    - 5.0
+    - 5.0
+  bbox_encoder:
+    encoder: Box2Delta
+    weights:
+    - 10.0
+    - 10.0
+    - 5.0
+    - 5.0
+  bbox_head:
+    activation:
+      activation: relu
+    conv_dims: 256
+    dropblock: null
+    fc_dims: 1024
+    feat_dims: 256
+    normalization: null
+    num_convs: 0
+    num_fc: 2
+    roi_pooling:
+      feat_dims: 256
+      pooled_size: 7
+      roi_pooling: MultiLevelAlignedRoIPooling
+  bbox_loss:
+    delta: 1.0
+    loss: SmoothL1Loss
+    reduction: none
+    weight: 1.0
+  class_agnostic: false
+  head: StandardRoIHead
+  label_loss:
+    from_logits: true
+    label_smoothing: 0.0
+    loss: CrossEntropy
+    reduction: none
+    weight: 1.0
+  max_level: 5
+  min_level: 2
+  reg_class_agnostic: true
+  sampler:
+    add_gt_as_proposals: true
+    num_proposals: 512
+    pos_fraction: 0.25
+    sampler: RandomSampler
+  use_sigmoid: false
+rpn_head:
+  activation:
+    activation: relu
+  assigner:
+    assigner: MaxIoUAssigner
+    min_pos_iou: 0.3
+    neg_iou_thresh: 0.3
+    pos_iou_thresh: 0.7
+  bbox_decoder:
+    decoder: Delta2Box
+    weights: null
+  bbox_encoder:
+    encoder: Box2Delta
+    weights: null
+  bbox_loss:
+    delta: 0.1111111111111111
+    loss: SmoothL1Loss
+    reduction: none
+    weight: 1.0
+  dropblock: null
+  feat_dims: 256
+  head: RPNHead
+  label_loss:
+    from_logits: true
+    label_smoothing: 0.0
+    loss: CrossEntropy
+    reduction: none
+    weight: 1.0
+  max_level: 6
+  min_level: 2
+  normalization: null
+  num_classes: 1
+  sampler:
+    add_gt_as_proposals: false
+    num_proposals: 256
+    pos_fraction: 0.5
+    sampler: RandomSampler
+  test_proposal:
+    iou_threshold: 0.7
+    min_box_size: 0.1
+    post_nms_size: 1000
+    pre_nms_size: 1000
+  train_proposal:
+    iou_threshold: 0.7
+    min_box_size: 0.0
+    post_nms_size: 1000
+    pre_nms_size: 2000
+  use_sigmoid: true
+test:
+  iou_threshold: 0.6
+  nms: CombinedNonMaxSuppression
+  post_nms_size: 100
+  pre_nms_size: 1000
+  score_threshold: 0.5
+train:
+  checkpoint_dir: checkpoints/faster_rcnn
+  dataset:
+    augmentations:
+    - FlipLeftToRight:
+        probability: 0.5
+    - RandomDistortColor:
+        probability: 1.0
+    - Resize:
+        max_scale: 1.0
+        min_scale: 1.0
+        size: &id001 !!python/tuple
+        - 1024
+        - 1024
+        strides: 32
+    batch_size: 2
+    dataset: COCODataset
+    dataset_dir: /data/bail/COCO
+    num_classes: 80
+    num_samples: 118287
+    training: true
+  gradient_clip_norm: 10.0
+  input_size: *id001
+  log_every_n_steps: 100
+  mixed_precision:
+    loss_scale: null
+  optimizer:
+    momentum: 0.9
+    optimizer: SGD
+  pretrained_weights_path: /data/bail/pretrained_weights/resnet50/resnet50.ckpt
+  save_ckpt_steps: 5000
+  scheduler:
+    learning_rate_scheduler:
+      boundaries:
+      - 8
+      - 11
+      scheduler: PiecewiseConstantDecay
+      values:
+      - 0.01
+      - 0.001
+      - 0.0001
+    train_epochs: 12
+    warmup:
+      steps: 2000
+      warmup_learning_rate: 1.0e-05
+  summary_dir: logs/faster_rcnn
+val:
+  dataset:
+    augmentations:
+    - Resize:
+        max_scale: 1.0
+        min_scale: 1.0
+        size: *id001
+        strides: 32
+    batch_size: 2
+    dataset: COCODataset
+    dataset_dir: /data/bail/COCO
+    training: false
+  input_size: *id001
+  samples: 5000
+weight_decay: 0.0001

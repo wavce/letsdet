@@ -1,0 +1,182 @@
+anchors:
+  aspect_ratios:
+  - 1.0
+  generator: AnchorGenerator
+  num_anchors: 6
+  scales:
+  - 16
+  - 32
+  - 64
+  - 128
+  - 256
+  - 512
+  strides: 16
+backbone:
+  activation:
+    activation: relu
+  backbone: CaffeResNet101
+  dilation_rates:
+  - 1
+  - 1
+  - 1
+  - 1
+  - 2
+  dropblock: null
+  frozen_stages:
+  - 1
+  normalization:
+    epsilon: 0.0001
+    momentum: 0.997
+    normalization: batch_norm
+    trainable: false
+  output_indices:
+  - 5
+  strides:
+  - 2
+  - 2
+  - 2
+  - 2
+  - 1
+data_format: channels_last
+detector: YOLOF
+dtype: float16
+excluding_weight_names:
+- predicted_box
+- predicted_class
+head:
+  activation:
+    activation: relu
+  assigner:
+    assigner: UniformAssigner
+    match_times: 8
+    neg_ignore_thresh: 0.15
+    pos_ignore_thresh: 0.7
+  bbox_decoder:
+    decoder: Delta2Box
+    weights:
+    - 1.0
+    - 1.0
+    - 1.0
+    - 1.0
+  bbox_encoder:
+    encoder: Box2Delta
+    weights:
+    - 1.0
+    - 1.0
+    - 1.0
+    - 1.0
+  bbox_loss:
+    loss: GIoULoss
+    reduction: sum
+    weight: 2.0
+  cls_num_convs: 2
+  feat_dims: 512
+  head: YOLOFHead
+  kernel_initializer: he_normal
+  label_loss:
+    alpha: 0.25
+    from_logits: true
+    gamma: 2.0
+    loss: FocalLoss
+    reduction: sum
+    weight: 1.0
+  normalization:
+    axis: -1
+    epsilon: 0.001
+    momentum: 0.9
+    normalization: batch_norm
+    trainable: true
+  prior: 0.01
+  reg_num_convs: 4
+  sampler:
+    sampler: PseudoSampler
+  use_sigmoid: true
+input_shape: !!python/tuple
+- 1024
+- 1024
+- 3
+neck:
+  activation:
+    activation: relu
+  data_format: channels_last
+  dilation_rates:
+  - 4
+  - 8
+  - 12
+  - 16
+  filters: 512
+  kernel_initializer: he_normal
+  midfilters: 128
+  neck: DilatedEncoder
+  normalization:
+    axis: -1
+    epsilon: 0.001
+    momentum: 0.9
+    normalization: batch_norm
+    trainable: true
+num_classes: 80
+test:
+  iou_threshold: 0.6
+  nms: CombinedNonMaxSuppression
+  post_nms_size: 100
+  pre_nms_size: 2000
+  score_threshold: 0.25
+train:
+  checkpoint_dir: checkpoints/yolof
+  dataset:
+    augmentations:
+    - augmentation: FlipLeftToRight
+      probability: 0.5
+    - augmentation: RandomDistortColor
+    - augmentation: Resize
+      img_scale:
+      - &id001 !!python/tuple
+        - 1333
+        - 800
+      keep_ratio: true
+    - augmentation: Pad
+      size_divisor: 32
+    batch_size: 4
+    dataset: COCODataset
+    dataset_dir: /data/bail/COCO
+    num_samples: 118287
+    training: true
+  gradient_clip_norm: 10.0
+  log_every_n_steps: 100
+  mixed_precision:
+    loss_scale: null
+  optimizer:
+    momentum: 0.9
+    optimizer: SGD
+  pretrained_weights_path: /data/bail/pretrained_weights/resnet50/resnet50.ckpt
+  save_ckpt_steps: 5000
+  scheduler:
+    learning_rate_scheduler:
+      boundaries:
+      - 16
+      - 22
+      scheduler: PiecewiseConstantDecay
+      values:
+      - 0.02
+      - 0.002
+      - 0.0002
+    train_epochs: 24
+    warmup:
+      steps: 800
+      warmup_learning_rate: 0.001
+  summary_dir: logs/yolof
+val:
+  dataset:
+    augmentations:
+    - augmentation: Resize
+      img_scale:
+      - *id001
+      keep_ratio: true
+    - augmentation: Pad
+      size_divisor: 32
+    batch_size: 4
+    dataset: COCODataset
+    dataset_dir: /data/bail/COCO
+    training: false
+  samples: 5000
+weight_decay: 0.0001

@@ -1,0 +1,173 @@
+anchors:
+  aspect_ratios:
+  - 0.5
+  - 1.0
+  - 2.0
+  generator: AnchorGeneratorV2
+  num_anchors: 9
+  octave_base_scale: 4
+  scales_per_octave: 3
+  strides:
+  - 8
+  - 16
+  - 32
+  - 64
+  - 128
+assigner:
+  assigner: MaxIoUAssigner
+  neg_iou_thresh: 0.4
+  pos_iou_thresh: 0.5
+backbone:
+  activation:
+    activation: relu
+  backbone: ResNeXt101_64X4D
+  dilation_rates:
+  - 1
+  - 1
+  - 1
+  - 1
+  - 1
+  dropblock: null
+  frozen_stages:
+  - 1
+  normalization:
+    epsilon: 0.0001
+    momentum: 0.997
+    normalization: batch_norm
+    trainable: false
+  output_indices:
+  - 3
+  - 4
+  - 5
+  strides:
+  - 2
+  - 2
+  - 2
+  - 2
+  - 2
+bbox_decoder:
+  decoder: Delta2Box
+  weights:
+  - 1.0
+  - 1.0
+  - 1.0
+  - 1.0
+bbox_encoder:
+  encoder: Box2Delta
+  weights:
+  - 1.0
+  - 1.0
+  - 1.0
+  - 1.0
+bbox_loss:
+  loss: SmoothL1Loss
+  reduction: sum
+  weight: 1.0
+data_format: channels_last
+detector: GFL
+dtype: float16
+excluding_weight_names:
+- predicted_box
+- predicted_class
+head:
+  activation:
+    activation: relu
+  dropblock: null
+  feat_dims: 256
+  head: RetinaNetHead
+  max_level: 7
+  min_level: 3
+  normalization: null
+  num_classes: 80
+  prior: 0.01
+  repeats: 4
+  use_sigmoid: true
+input_shape: !!python/tuple
+- 1024
+- 1024
+- 3
+label_loss:
+  alpha: 0.25
+  from_logits: true
+  gamma: 2.0
+  loss: FocalLoss
+  reduction: sum
+  weight: 1.0
+neck:
+  add_extra_convs: true
+  add_extra_convs_on_c5: true
+  feat_dims: 256
+  max_level: 5
+  min_level: 3
+  neck: FPN
+  num_output_levels: 5
+  relu_before_extra_convs: false
+num_classes: 80
+sampler:
+  sampler: PseudoSampler
+test:
+  iou_threshold: 0.6
+  nms: CombinedNonMaxSuppression
+  post_nms_size: 100
+  pre_nms_size: 5000
+  score_threshold: 0.35
+train:
+  checkpoint_dir: checkpoints/retinanet
+  dataset:
+    augmentations:
+    - FlipLeftToRight:
+        probability: 0.5
+    - RandomDistortColor:
+        probability: 1.0
+    - Resize:
+        max_scale: 2.0
+        min_scale: 0.5
+        size: &id001 !!python/tuple
+        - 1024
+        - 1024
+        strides: 32
+    batch_size: 4
+    dataset: COCODataset
+    dataset_dir: /data/bail/COCO
+    num_samples: 118287
+    training: true
+  gradient_clip_norm: 10.0
+  input_size: *id001
+  log_every_n_steps: 100
+  mixed_precision:
+    loss_scale: null
+  optimizer:
+    momentum: 0.9
+    optimizer: SGD
+  pretrained_weights_path: /data/bail/pretrained_weights/resnet50/resnet50.ckpt
+  save_ckpt_steps: 5000
+  scheduler:
+    learning_rate_scheduler:
+      boundaries:
+      - 16
+      - 22
+      scheduler: PiecewiseConstantDecay
+      values:
+      - 0.02
+      - 0.002
+      - 0.0002
+    train_epochs: 24
+    warmup:
+      steps: 800
+      warmup_learning_rate: 0.001
+  summary_dir: logs/retinanet
+val:
+  dataset:
+    augmentations:
+    - Resize:
+        max_scale: 1.0
+        min_scale: 1.0
+        size: *id001
+        strides: 32
+    batch_size: 4
+    dataset: COCODataset
+    dataset_dir: /data/bail/COCO
+    training: false
+  input_size: *id001
+  samples: 5000
+weight_decay: 0.0001
